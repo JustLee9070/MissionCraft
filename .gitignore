@@ -1,0 +1,17 @@
+# Executables
+*.exe
+*.dll
+
+# Object files
+*.o
+*.obj
+
+# Build files
+build/
+dist/
+
+# IDE
+.vscode/
+
+# Temporary files
+*.log
