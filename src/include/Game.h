@@ -1,39 +1,26 @@
 #pragma once
 #include <SDL3/SDL.h>
-#include <string>
-#include <vector>
+#include <SDL3_ttf/SDL_ttf.h>
+#include <memory>
+#include "Screen.h"
 
 class Game {
 private:
-    enum class Screen {
-        Designer,
-        Planner,
-        MissionControl
-    };
-
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
+
     bool running = false;
+    bool ttfInitialized = false;
 
-    Screen currentScreen = Screen::Designer;
+    std::unique_ptr<Screen> currentScreen;
 
-    std::vector<std::string> components;
-    std::string destination = "Moon";
-
-    float totalMass = 0.0f;
-    float powerGeneration = 0.0f;
-    float powerConsumption = 0.0f;
-    float fuelCapacity = 0.0f;
-
-    int missionPhase = 0;
+    ScreenType pendingScreen = ScreenType::Title;
+    bool hasPendingScreen = false;
 
     void handleEvents();
+    void update(float deltaTime);
     void render();
-    void renderDesigner();
-    void renderPlanner();
-    void renderMissionControl();
-    void addComponent(int componentType);
-    bool isSpacecraftReady() const;
+    void changeScreen(ScreenType screen);
 
 public:
     bool initialize();
