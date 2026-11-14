@@ -1,73 +1,54 @@
-
-#include "../include/screens/MainMenu.h"
+#include "screens/MainMenu.h"
+#include "SpaceArtwork.h"
 
 namespace {
-    struct MenuButton {
-        SDL_FRect rect;
-        const char* label;
-        ScreenType destination;
-    };
+using namespace screenDrawing;
 
-    MenuButton buttons[] = {
-        {{450, 300, 300, 55}, "NEW GAME", ScreenType::Designer},
-        {{450, 375, 300, 55}, "LOAD GAME", ScreenType::MainMenu},
-        {{450, 450, 300, 55}, "OPTIONS", ScreenType::Options},
-        {{450, 525, 300, 55}, "EXIT", ScreenType::Exit}
-    };
+struct MenuButton {
+    SDL_FRect bounds;
+    const char* label;
+    ScreenType destination;
+};
 
-    bool isInside(float x, float y, const SDL_FRect& rect) {
-        return x >= rect.x && x <= rect.x + rect.w &&
-               y >= rect.y && y <= rect.y + rect.h;
-    }
+constexpr MenuButton buttons[] = {
+    {{450, 300, 300, 55}, "New game", ScreenType::NewGame},
+    {{450, 375, 300, 55}, "Load game", ScreenType::LoadGame},
+    {{450, 450, 300, 55}, "Options", ScreenType::Options},
+    {{450, 525, 300, 55}, "Exit", ScreenType::Exit}
+};
 }
 
-void MainMenu::handleEvents(const SDL_Event& event) {
-    if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN &&
-        event.button.button == SDL_BUTTON_LEFT) {
+void MainMenu::handleEvents(const SDL_Event& event)
+{
+    if (event.type != SDL_EVENT_MOUSE_BUTTON_DOWN || event.button.button != SDL_BUTTON_LEFT) {
+        return;
+    }
 
-        for (const auto& button : buttons) {
-            if (isInside(event.button.x, event.button.y, button.rect)) {
-                if (button.label != nullptr) {
-                    requestScreenChange(button.destination);
-                }
-                break;
-            }
+    const SDL_FPoint click{event.button.x, event.button.y};
+    for (const auto& button : buttons) {
+        if ((saveAvailable || button.destination != ScreenType::LoadGame) &&
+            SDL_PointInRectFloat(&click, &button.bounds)) {
+            requestScreenChange(button.destination);
+            return;
         }
     }
 }
 
-void MainMenu::update(float deltaTime) {
+void MainMenu::update(float deltaTime)
+{
     (void)deltaTime;
 }
 
-void MainMenu::render(SDL_Renderer* renderer) {
-    SDL_SetRenderDrawColor(renderer, 12, 20, 40, 255);
-    SDL_RenderClear(renderer);
-
-    SDL_SetRenderDrawColor(renderer, 255, 180, 60, 255);
-    SDL_RenderDebugText(renderer, 540, 200, "MISSIONCRAFT");
-
-    float mouseX, mouseY;
-    SDL_GetMouseState(&mouseX, &mouseY);
-
+void MainMenu::render(SDL_Renderer* renderer)
+{
+    const auto mouse = pointerPosition(renderer);
+    spaceArtwork::drawBackdrop(renderer, spaceArtwork::nebula, 165);
+    spaceArtwork::drawSprite(renderer, spaceArtwork::earth, {-145, 280, 540, 540}, 190);
+    spaceArtwork::drawSprite(renderer, spaceArtwork::moon, {885, 160, 230, 230}, 212);
+    drawText(renderer, 450, 192, "MISSIONCRAFT", text, 3.75f);
     for (const auto& button : buttons) {
-        bool hovered = isInside(mouseX, mouseY, button.rect);
-
-        if (hovered) {
-            SDL_SetRenderDrawColor(renderer, 190, 120, 35, 255);
-        } else {
-            SDL_SetRenderDrawColor(renderer, 45, 60, 85, 255);
-        }
-
-        SDL_RenderFillRect(renderer, &button.rect);
-
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-
-        SDL_RenderDebugText(
-            renderer,
-            button.rect.x + 115,
-            button.rect.y + 23,
-            button.label
-        );
+        drawButton(renderer, button.bounds, mouse, button.label,
+                   saveAvailable || button.destination != ScreenType::LoadGame);
     }
+    drawText(renderer, 450, 602, message, amber, 1.5f);
 }
