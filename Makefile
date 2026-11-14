@@ -1,6 +1,8 @@
+
 CXX = g++
 
-CXXFLAGS = -std=c++17 -Wall -Wextra -I src/include
+CXXFLAGS = -std=c++17 -Wall -Wextra -I src/include -I src/external
+
 LIBS = -lSDL3 -lSDL3_image -lSDL3_ttf
 
 SRC = main.cpp src/Game.cpp src/OptionsManager.cpp src/GameState.cpp \
