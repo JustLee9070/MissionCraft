@@ -243,7 +243,15 @@ void Game::update(float deltaTime)
 {
     if (currentScreen)
     {
+        const auto previousPhase = gameState.missionPhase();
         currentScreen->update(deltaTime);
+        if (audio && previousPhase == MissionPhase::InProgress) {
+            if (gameState.missionPhase() == MissionPhase::Completed) {
+                audio->play(SoundCue::Complete);
+            } else if (gameState.missionPhase() == MissionPhase::Failed) {
+                audio->play(SoundCue::Failure);
+            }
+        }
     }
 }
 

@@ -6,6 +6,31 @@
 #include <vector>
 
 enum class MissionPhase { Planning, InProgress, Completed, Failed };
+enum class FlightFailure { None, Fuel, Power, Radiation, MissedBurn, PayloadOff };
+enum class BurnStatus { Coasting, Ready, Firing, Complete, WindowMissed };
+enum class FlightHazard { None, RadiationAhead, Radiation, DebrisAhead, Debris };
+
+struct FlightStatus {
+    bool arraysDeployed = false;
+    bool payloadPowered = false;
+    bool engineFiring = false;
+    bool protectiveMode = false;
+    double radiationDose = 0;
+    double arrayHealth = 100;
+    double progress = 0;
+    double burnFuelKg = 0;
+    double charge = 100;
+    FlightFailure failure = FlightFailure::None;
+};
+
+struct FlightConditions {
+    double burnFuelRemaining;
+    double powerWatts;
+    double windowSeconds;
+    bool sunlight;
+    BurnStatus burn;
+    FlightHazard hazard;
+};
 
 struct FlightStep {
     const char* name;
@@ -30,6 +55,16 @@ public:
     bool canSetFuelLoad() const;
     void adjustFuelLoad(double changeKg);
     void advanceMission();
+    bool inFlight() const;
+    const FlightStatus& flight() const { return flightStatus; }
+    FlightConditions flightConditions() const;
+    void startBurn();
+    void toggleSolarArrays();
+    void togglePayload();
+    void toggleProtectiveMode();
+    void updateFlight(double seconds);
+    bool restoreMission(MissionPhase savedPhase, std::size_t steps, double loaded,
+                        double remaining, const FlightStatus& savedFlight);
     void returnToPlanning();
 
 private:
@@ -39,4 +74,5 @@ private:
     std::size_t stepsCompleted = 0;
     double fuelKg = 0;
     double loadedKg = 0;
+    FlightStatus flightStatus;
 };
