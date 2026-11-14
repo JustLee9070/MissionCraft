@@ -83,6 +83,7 @@ You will need:
 - SDL3.
 - SDL3_image.
 - SDL3_ttf.
+- nlohmann/json.
 
 ### Installation
 
@@ -94,8 +95,9 @@ Open the MSYS2 UCRT64 terminal and run:
 pacman -S mingw-w64-ucrt-x86_64-gcc \
           mingw-w64-ucrt-x86_64-make \
           mingw-w64-ucrt-x86_64-sdl3 \
-          mingw-w64-ucrt-x86_64-sdl3_image \
-          mingw-w64-ucrt-x86_64-sdl3_ttf
+          mingw-w64-ucrt-x86_64-sdl3-image \
+          mingw-w64-ucrt-x86_64-sdl3-ttf \
+          mingw-w64-ucrt-x86_64-nlohmann-json
 ```
 
 **2. Clone the repository**

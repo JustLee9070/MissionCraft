@@ -6,6 +6,8 @@
 enum class ScreenType {
     Title,
     MainMenu,
+    NewGame,
+    LoadGame,
     Designer,
     Planner,
     MissionControl,

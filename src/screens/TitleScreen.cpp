@@ -1,5 +1,6 @@
 
 #include "../include/screens/TitleScreen.h"
+#include "SpaceArtwork.h"
 
 void TitleScreen::handleEvents(const SDL_Event& event) {
     if (event.type == SDL_EVENT_KEY_DOWN &&
@@ -18,15 +19,16 @@ void TitleScreen::update(float deltaTime) {
 }
 
 void TitleScreen::render(SDL_Renderer* renderer) {
-    SDL_SetRenderDrawColor(renderer, 8, 15, 35, 255);
-    SDL_RenderClear(renderer);
-
-    SDL_SetRenderDrawColor(renderer, 255, 180, 60, 255);
-    SDL_RenderDebugText(renderer, 480, 280, "MISSIONCRAFT");
-
-    SDL_SetRenderDrawColor(renderer, 220, 225, 235, 255);
-    SDL_RenderDebugText(renderer, 440, 330, "DESIGN. ENGINEER. EXPLORE.");
-
-    SDL_SetRenderDrawColor(renderer, 255, 200, 100, 255);
-    SDL_RenderDebugText(renderer, 490, 430, "CLICK TO CONTINUE");
+    using namespace screenDrawing;
+    spaceArtwork::drawBackdrop(renderer, spaceArtwork::nebula, 165);
+    spaceArtwork::drawSprite(renderer, spaceArtwork::sun, {1080, -115, 228, 228}, 185);
+    spaceArtwork::drawSprite(renderer, spaceArtwork::earth, {635, 158, 485, 485}, 218);
+    spaceArtwork::drawSprite(renderer, spaceArtwork::moon, {1020, 156, 112, 112});
+    spaceArtwork::drawSprite(renderer, spaceArtwork::ship, {615, 438, 214, 214});
+    setColor(renderer, cyan);
+    SDL_RenderLine(renderer, 62, 296, 132, 296);
+    drawText(renderer, 62, 318, "MISSIONCRAFT", text, 5.5f);
+    drawText(renderer, 64, 414, "Design. Engineer. Explore.", text, 1.75f);
+    drawButton(renderer, {62, 485, 264, 55}, pointerPosition(renderer),
+               "Continue (Enter)", true, true);
 }

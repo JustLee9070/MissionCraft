@@ -7,17 +7,40 @@
 #include "screens/PlannerScreen.h"
 #include "screens/MissionControl.h"
 #include "screens/OptionsScreen.h"
+#include "screens/ScreenDrawing.h"
 
 #include <iostream>
+#include <utility>
 
 namespace
 {
-    constexpr int WINDOW_WIDTH = 1200;
-    constexpr int WINDOW_HEIGHT = 800;
+    constexpr int DESIGN_WIDTH = 1200;
+    constexpr int DESIGN_HEIGHT = 800;
+    constexpr SDL_FRect saveButton{1008, 764, 160, 32};
+
+    bool canSaveOn(ScreenType screen)
+    {
+        return screen == ScreenType::Designer || screen == ScreenType::Planner ||
+               screen == ScreenType::MissionControl;
+    }
+
+    bool saveRequested(const SDL_Event& event)
+    {
+        if (event.type == SDL_EVENT_KEY_DOWN && !event.key.repeat) {
+            return event.key.key == SDLK_F5;
+        }
+        if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN && event.button.button == SDL_BUTTON_LEFT) {
+            const SDL_FPoint click{event.button.x, event.button.y};
+            return SDL_PointInRectFloat(&click, &saveButton);
+        }
+        return false;
+    }
 }
 
 bool Game::initialize()
 {
+    options.load();
+    const auto& display = options.getSettings();
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         std::cerr << "SDL initialization failed: " << SDL_GetError() << '\n';
@@ -26,9 +49,9 @@ bool Game::initialize()
 
     if (!SDL_CreateWindowAndRenderer(
             "MissionCraft",
-            WINDOW_WIDTH,
-            WINDOW_HEIGHT,
-            0,
+            display.width,
+            display.height,
+            display.fullscreen ? SDL_WINDOW_FULLSCREEN : 0,
             &window,
             &renderer))
     {
@@ -36,7 +59,14 @@ bool Game::initialize()
         return false;
     }
 
-    SDL_SetRenderVSync(renderer, 1);
+    if (!SDL_SetRenderLogicalPresentation(renderer, DESIGN_WIDTH, DESIGN_HEIGHT,
+                                          SDL_LOGICAL_PRESENTATION_LETTERBOX)) {
+        std::cerr << "Could not configure the game viewport: " << SDL_GetError() << '\n';
+        return false;
+    }
+    if (!SDL_SetRenderVSync(renderer, display.vsync ? 1 : 0)) {
+        std::cerr << "Could not apply saved VSync setting: " << SDL_GetError() << '\n';
+    }
 
     if (!TTF_Init())
     {
@@ -45,6 +75,11 @@ bool Game::initialize()
     }
 
     ttfInitialized = true;
+    assets = std::make_unique<AssetManager>(renderer);
+    audio = std::make_unique<GameAudio>();
+    if (audio->initialize()) {
+        audio->setVolume(display.masterVolume);
+    }
     running = true;
 
     changeScreen(ScreenType::Title);
@@ -52,8 +87,53 @@ bool Game::initialize()
     return true;
 }
 
+bool Game::applyDisplaySettings(const DisplaySettings& requested)
+{
+    const auto previous = options.getSettings();
+    int previousVsync = 0;
+    if (!SDL_GetRenderVSync(renderer, &previousVsync)) {
+        return false;
+    }
+    const bool wasFullscreen = (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) != 0;
+    if (!SDL_SetRenderVSync(renderer, requested.vsync ? 1 : 0)) {
+        return false;
+    }
+    if (wasFullscreen != requested.fullscreen &&
+        !SDL_SetWindowFullscreen(window, requested.fullscreen)) {
+        SDL_SetRenderVSync(renderer, previousVsync);
+        return false;
+    }
+    options.setSettings(requested);
+    if (options.save()) {
+        if (audio) {
+            audio->setVolume(options.getSettings().masterVolume);
+            audio->play(SoundCue::Select);
+        }
+        return true;
+    }
+    options.setSettings(previous);
+    SDL_SetWindowFullscreen(window, wasFullscreen);
+    SDL_SetRenderVSync(renderer, previousVsync);
+    return false;
+}
+
 void Game::changeScreen(ScreenType screen)
 {
+    const char* menuMessage = "";
+    if (screen == ScreenType::LoadGame) {
+        if (auto saved = saves.loadGame()) {
+            gameState = std::move(saved->state);
+            screen = saved->screen;
+        } else {
+            menuMessage = "Could not load the saved game.";
+            screen = ScreenType::MainMenu;
+        }
+    } else if (screen == ScreenType::NewGame) {
+        gameState = GameState{};
+        screen = ScreenType::Designer;
+    }
+    activeScreen = screen;
+    saveMessage = "";
     switch (screen)
     {
     case ScreenType::Title:
@@ -61,28 +141,35 @@ void Game::changeScreen(ScreenType screen)
         break;
 
     case ScreenType::MainMenu:
-        currentScreen = std::make_unique<MainMenu>();
+        currentScreen = std::make_unique<MainMenu>(saves.hasSave(), menuMessage);
         break;
 
     case ScreenType::Designer:
-        currentScreen = std::make_unique<DesignerScreen>();
+        currentScreen = std::make_unique<DesignerScreen>(gameState);
         break;
 
     case ScreenType::Planner:
-        currentScreen = std::make_unique<PlannerScreen>();
+        currentScreen = std::make_unique<PlannerScreen>(gameState);
         break;
 
     case ScreenType::MissionControl:
-        currentScreen = std::make_unique<MissionControl>();
+        currentScreen = std::make_unique<MissionControl>(gameState);
         break;
 
     case ScreenType::Options:
-        currentScreen = std::make_unique<OptionsScreen>();
+        currentScreen = std::make_unique<OptionsScreen>(
+            options.getSettings(), [this](const DisplaySettings& settings) {
+                return applyDisplaySettings(settings);
+            });
         break;
 
     case ScreenType::Exit:
         running = false;
         currentScreen.reset();
+        return;
+
+    case ScreenType::NewGame:
+    case ScreenType::LoadGame:
         return;
     }
 
@@ -112,7 +199,31 @@ void Game::handleEvents()
 
         if (currentScreen)
         {
-            currentScreen->handleEvents(event);
+            SDL_ConvertEventToRenderCoordinates(renderer, &event);
+            if (canSaveOn(activeScreen) && saveRequested(event)) {
+                saveMessage = saves.saveGame(gameState, activeScreen) ?
+                    "Game saved." : "Could not save the game.";
+            } else {
+                const auto previousPhase = gameState.missionPhase();
+                const auto previousSteps = gameState.completedSteps();
+                const auto previousParts = gameState.spacecraft().components().size();
+                const auto previousDestination = gameState.destination().id;
+                currentScreen->handleEvents(event);
+                if (audio) {
+                    const auto phase = gameState.missionPhase();
+                    if (phase != previousPhase && phase == MissionPhase::Completed) {
+                        audio->play(SoundCue::Complete);
+                    } else if (phase != previousPhase && phase == MissionPhase::Failed) {
+                        audio->play(SoundCue::Failure);
+                    } else if (activeScreen == ScreenType::MissionControl && previousSteps == 0 &&
+                               gameState.completedSteps() == 1) {
+                        audio->play(SoundCue::Launch);
+                    } else if (hasPendingScreen || previousParts != gameState.spacecraft().components().size() ||
+                               previousDestination != gameState.destination().id) {
+                        audio->play(SoundCue::Select);
+                    }
+                }
+            }
         }
 
         if (hasPendingScreen)
@@ -144,6 +255,11 @@ void Game::render()
     }
 
     currentScreen->render(renderer);
+    if (canSaveOn(activeScreen)) {
+        using namespace screenDrawing;
+        drawText(renderer, 32, 770, saveMessage, muted, 1.25f);
+        drawButton(renderer, saveButton, pointerPosition(renderer), "Save (F5)", true);
+    }
     SDL_RenderPresent(renderer);
 }
 
@@ -167,6 +283,8 @@ void Game::run()
 Game::~Game()
 {
     currentScreen.reset();
+    assets.reset();
+    audio.reset();
 
     if (renderer)
     {

@@ -9,6 +9,7 @@
 # Build files
 build/
 dist/
+/saves/
 
 # IDE
 .vscode/

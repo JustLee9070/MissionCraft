@@ -1,0 +1,11 @@
+{
+  "audio": {
+    "masterVolume": 80
+  },
+  "display": {
+    "fullscreen": false,
+    "height": 800,
+    "vsync": true,
+    "width": 1200
+  }
+}
