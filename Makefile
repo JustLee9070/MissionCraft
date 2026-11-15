@@ -32,20 +32,19 @@ $(TARGET): $(SRC) $(RESOURCE)
 run: all
 	.\$(TARGET)
 
-
 build:
-	if exist build rmdir /S /Q build
-	mkdir build
-	mkdir build\saves
-	$(WINDRES) resources.rc -O coff -o build\resources.o
-	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) $(SRC) build\resources.o -o build\MissionCraft.exe $(LIBS)
-	powershell -NoProfile -ExecutionPolicy Bypass -Command "Copy-Item assets build -Recurse"
-	powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Test-Path config) { Copy-Item config build -Recurse }"
-	powershell -NoProfile -ExecutionPolicy Bypass -Command "$$deps = & objdump -p build/MissionCraft.exe | Select-String 'DLL Name:'; foreach ($$dep in $$deps) { $$name = ($$dep.ToString() -split ':')[1].Trim(); $$path = & where.exe $$name 2>$$null | Select-Object -First 1; if ($$path) { Copy-Item $$path build -Force } }"
-	powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-Content build/README.txt 'MissionCraft - Windows Release`n`nExtract this folder and run MissionCraft.exe.`nKeep the executable, assets, and DLL files together.'"
+	if exist $(BUILD_DIR) rmdir /S /Q $(BUILD_DIR)
+	mkdir $(BUILD_DIR)
+	mkdir $(BUILD_DIR)\saves
+	$(WINDRES) resources.rc -O coff -o $(BUILD_DIR)\resources.o
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) $(SRC) $(BUILD_DIR)\resources.o -o $(BUILD_DIR)\MissionCraft.exe $(LIBS)
+	powershell -NoProfile -ExecutionPolicy Bypass -Command "Copy-Item assets $(BUILD_DIR) -Recurse"
+	powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Test-Path config) { Copy-Item config $(BUILD_DIR) -Recurse }"
+	powershell -NoProfile -ExecutionPolicy Bypass -Command "$$bin = Split-Path (Get-Command g++.exe).Source -Parent; $$objdump = Join-Path $$bin 'objdump.exe'; $$queue = [System.Collections.Generic.Queue[string]]::new(); $$queue.Enqueue((Resolve-Path '$(BUILD_DIR)/MissionCraft.exe').Path); $$seen = @{}; while ($$queue.Count -gt 0) { $$file = $$queue.Dequeue(); foreach ($$dep in (& $$objdump -p $$file 2>$$null | Select-String 'DLL Name:')) { $$name = ($$dep.ToString() -split ':', 2)[1].Trim(); if (-not $$seen.ContainsKey($$name)) { $$seen[$$name] = $$true; $$path = Join-Path $$bin $$name; if (Test-Path $$path) { Copy-Item $$path '$(BUILD_DIR)' -Force; $$queue.Enqueue($$path) } } } }"
+	powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-Content '$(BUILD_DIR)/README.txt' 'MissionCraft - Windows Release'; Add-Content '$(BUILD_DIR)/README.txt' ''; Add-Content '$(BUILD_DIR)/README.txt' 'Extract this folder and run MissionCraft.exe.'; Add-Content '$(BUILD_DIR)/README.txt' 'Keep the executable, assets, and DLL files together.'"
 
 clean:
 	del /Q $(TARGET) $(RESOURCE) 2>NUL
-	if exist build rmdir /S /Q build
+	if exist $(BUILD_DIR) rmdir /S /Q $(BUILD_DIR)
 
 .PHONY: all run build clean
