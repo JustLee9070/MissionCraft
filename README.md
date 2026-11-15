@@ -243,7 +243,7 @@ MissionCraft was developed collaboratively for the **NASA Space Apps Challenge 2
 | Team Member | Role & Contributions |
 |---|---|
 | **Rakshin Joshi** | **Development Lead** – Led overall development, game architecture, core programming, and integration of game systems. |
-| **Aryan Gautam** | **Game Developer** – Contributed to game development and implementation. |
+| **Aryan Gautam** | **Game Developer & Logic Implementation** – Contributed to game development, implemented core game logic, and worked on integrating gameplay systems and features. |
 | **Ojas Kashyap** | **Asset Research, Collection & Presentation** – Researched and gathered game assets, including audio and launch vehicle resources, and contributed to preparing the project presentation (PPT). |
 | **Harshita Shrivastava** | **Asset Research & Collection** – Assisted in gathering and organizing visual and audio resources for the game. |
 | **Harshil Agrawal** | **Presentation & Documentation** – Worked on the project presentation (PPT) and communicating the project concept. |
