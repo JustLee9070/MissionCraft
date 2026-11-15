@@ -3,7 +3,7 @@ CXX = g++
 
 CXXFLAGS = -std=c++17 -Wall -Wextra -I src/include -I src/external
 
-LIBS = -lSDL3 -lSDL3_image -lSDL3_ttf
+LIBS = -lSDL3 -lSDL3_image -lSDL3_ttf -lSDL3_mixer
 
 SRC = main.cpp src/Game.cpp src/OptionsManager.cpp src/GameState.cpp \
       src/Component.cpp src/Spacecraft.cpp src/Destination.cpp src/AssetManager.cpp src/SaveManager.cpp src/GameAudio.cpp \

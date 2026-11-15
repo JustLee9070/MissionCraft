@@ -1,3 +1,4 @@
+
 #include "OptionsManager.h"
 
 #include <algorithm>
@@ -24,6 +25,15 @@ bool readToggle(const json& display, const char* key, bool fallback)
     return value != display.end() && value->is_boolean()
         ? value->get<bool>() : fallback;
 }
+
+int readVolume(const json& audio, const char* key, int fallback)
+{
+    const auto value = audio.find(key);
+    if (value == audio.end() || !value->is_number_integer()) {
+        return fallback;
+    }
+    return std::clamp(value->get<int>(), 0, 100);
+}
 }
 
 OptionsManager::OptionsManager(std::filesystem::path path)
@@ -34,35 +44,46 @@ OptionsManager::OptionsManager(std::filesystem::path path)
 void OptionsManager::load()
 {
     resetDefaults();
+
     std::ifstream input(path);
     if (!input) {
         return;
     }
+
     const auto document = json::parse(input, nullptr, false);
+    if (document.is_discarded() || !document.is_object()) {
+        return;
+    }
+
     const auto display = document.find("display");
     if (display == document.end() || !display->is_object()) {
         return;
     }
+
     const auto audio = document.find("audio");
-    int volume = settings.masterVolume;
+
+    int masterVolume = settings.masterVolume;
+    int musicVolume = settings.musicVolume;
+
     if (audio != document.end() && audio->is_object()) {
-        const auto savedVolume = audio->find("masterVolume");
-        if (savedVolume != audio->end() && savedVolume->is_number_integer()) {
-            volume = static_cast<int>(std::clamp(savedVolume->get<double>(), 0.0, 100.0));
-        }
+        masterVolume = readVolume(*audio, "masterVolume", masterVolume);
+        musicVolume = readVolume(*audio, "musicVolume", musicVolume);
     }
+
     setSettings({
         readDimension(*display, "width"),
         readDimension(*display, "height"),
         readToggle(*display, "fullscreen", settings.fullscreen),
         readToggle(*display, "vsync", settings.vsync),
-        volume
+        masterVolume,
+        musicVolume
     });
 }
 
 bool OptionsManager::save() const
 {
     std::error_code error;
+
     if (path.has_parent_path()) {
         std::filesystem::create_directories(path.parent_path(), error);
         if (error) {
@@ -72,24 +93,35 @@ bool OptionsManager::save() const
 
     auto temporaryPath = path;
     temporaryPath += ".tmp";
-    const json document = {{"display", {
-        {"width", settings.width},
-        {"height", settings.height},
-        {"fullscreen", settings.fullscreen},
-        {"vsync", settings.vsync}
-    }}, {"audio", {{"masterVolume", settings.masterVolume}}}};
+
+    const json document = {
+        {"display", {
+            {"width", settings.width},
+            {"height", settings.height},
+            {"fullscreen", settings.fullscreen},
+            {"vsync", settings.vsync}
+        }},
+        {"audio", {
+            {"masterVolume", settings.masterVolume},
+            {"musicVolume", settings.musicVolume}
+        }}
+    };
+
     std::ofstream output(temporaryPath);
     if (!output) {
         return false;
     }
+
     output << document.dump(2) << '\n';
     output.close();
+
     if (output) {
         std::filesystem::rename(temporaryPath, path, error);
         if (!error) {
             return true;
         }
     }
+
     std::filesystem::remove(temporaryPath, error);
     return false;
 }
@@ -112,12 +144,17 @@ void OptionsManager::resetDefaults()
 DisplaySettings OptionsManager::validateSettings(DisplaySettings candidate)
 {
     const DisplaySettings defaults;
+
     if (candidate.width < 640 || candidate.width > 16384) {
         candidate.width = defaults.width;
     }
+
     if (candidate.height < 480 || candidate.height > 16384) {
         candidate.height = defaults.height;
     }
+
     candidate.masterVolume = std::clamp(candidate.masterVolume, 0, 100);
+    candidate.musicVolume = std::clamp(candidate.musicVolume, 0, 100);
+
     return candidate;
 }

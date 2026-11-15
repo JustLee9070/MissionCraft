@@ -8,12 +8,16 @@
 namespace {
 constexpr SDL_FRect fullscreenButton{400, 250, 400, 54};
 constexpr SDL_FRect vsyncButton{400, 320, 400, 54};
-constexpr SDL_FRect resetButton{400, 449, 400, 54};
-constexpr SDL_FRect backButton{400, 530, 170, 54};
-constexpr SDL_FRect applyButton{630, 530, 170, 54};
-constexpr SDL_FRect quieterButton{400, 386, 83, 44};
-constexpr SDL_FRect louderButton{717, 386, 83, 44};
 
+constexpr SDL_FRect masterQuieterButton{400, 386, 83, 44};
+constexpr SDL_FRect masterLouderButton{717, 386, 83, 44};
+
+constexpr SDL_FRect musicQuieterButton{400, 438, 83, 44};
+constexpr SDL_FRect musicLouderButton{717, 438, 83, 44};
+
+constexpr SDL_FRect resetButton{400, 500, 400, 54};
+constexpr SDL_FRect backButton{400, 565, 170, 54};
+constexpr SDL_FRect applyButton{630, 565, 170, 54};
 }
 
 OptionsScreen::OptionsScreen(DisplaySettings settings, ApplySettings applySettings)
@@ -26,25 +30,32 @@ void OptionsScreen::handleEvents(const SDL_Event& event) {
         requestScreenChange(ScreenType::MainMenu);
         return;
     }
+
     if (event.type != SDL_EVENT_MOUSE_BUTTON_DOWN || event.button.button != SDL_BUTTON_LEFT) {
         return;
     }
 
     const SDL_FPoint click{event.button.x, event.button.y};
     status = "";
+
     if (SDL_PointInRectFloat(&click, &fullscreenButton)) {
         draft.fullscreen = !draft.fullscreen;
     } else if (SDL_PointInRectFloat(&click, &vsyncButton)) {
         draft.vsync = !draft.vsync;
-    } else if (SDL_PointInRectFloat(&click, &quieterButton)) {
+    } else if (SDL_PointInRectFloat(&click, &masterQuieterButton)) {
         draft.masterVolume = std::max(0, draft.masterVolume - 10);
-    } else if (SDL_PointInRectFloat(&click, &louderButton)) {
+    } else if (SDL_PointInRectFloat(&click, &masterLouderButton)) {
         draft.masterVolume = std::min(100, draft.masterVolume + 10);
+    } else if (SDL_PointInRectFloat(&click, &musicQuieterButton)) {
+        draft.musicVolume = std::max(0, draft.musicVolume - 10);
+    } else if (SDL_PointInRectFloat(&click, &musicLouderButton)) {
+        draft.musicVolume = std::min(100, draft.musicVolume + 10);
     } else if (SDL_PointInRectFloat(&click, &resetButton)) {
         const DisplaySettings defaults;
         draft.fullscreen = defaults.fullscreen;
         draft.vsync = defaults.vsync;
         draft.masterVolume = defaults.masterVolume;
+        draft.musicVolume = defaults.musicVolume;
     } else if (SDL_PointInRectFloat(&click, &backButton)) {
         requestScreenChange(ScreenType::MainMenu);
     } else if (SDL_PointInRectFloat(&click, &applyButton)) {
@@ -58,18 +69,35 @@ void OptionsScreen::update(float deltaTime) {
 
 void OptionsScreen::render(SDL_Renderer* renderer) {
     using namespace screenDrawing;
+
     const auto mouse = pointerPosition(renderer);
     spaceArtwork::drawBackdrop(renderer);
+
     drawText(renderer, 400, 155, "OPTIONS", text, 3.5f);
-    drawButton(renderer, fullscreenButton, mouse, draft.fullscreen ? "Fullscreen: On" : "Fullscreen: Off", true);
-    drawButton(renderer, vsyncButton, mouse, draft.vsync ? "VSync: On" : "VSync: Off", true);
+
+    drawButton(renderer, fullscreenButton, mouse,
+               draft.fullscreen ? "Fullscreen: On" : "Fullscreen: Off", true);
+
+    drawButton(renderer, vsyncButton, mouse,
+               draft.vsync ? "VSync: On" : "VSync: Off", true);
+
     char volume[48];
+
     std::snprintf(volume, sizeof(volume), "Master volume %d%%", draft.masterVolume);
     drawText(renderer, 498, 396, volume, text, 1.5f);
-    drawButton(renderer, quieterButton, mouse, "-10", draft.masterVolume > 0);
-    drawButton(renderer, louderButton, mouse, "+10", draft.masterVolume < 100);
+
+    drawButton(renderer, masterQuieterButton, mouse, "-10", draft.masterVolume > 0);
+    drawButton(renderer, masterLouderButton, mouse, "+10", draft.masterVolume < 100);
+
+    std::snprintf(volume, sizeof(volume), "Music volume %d%%", draft.musicVolume);
+    drawText(renderer, 498, 448, volume, text, 1.5f);
+
+    drawButton(renderer, musicQuieterButton, mouse, "-10", draft.musicVolume > 0);
+    drawButton(renderer, musicLouderButton, mouse, "+10", draft.musicVolume < 100);
+
     drawButton(renderer, resetButton, mouse, "Reset settings", true);
     drawButton(renderer, backButton, mouse, "Back", true);
     drawButton(renderer, applyButton, mouse, "Apply", true, true);
-    drawText(renderer, 400, 611, status, muted, 1.5f);
+
+    drawText(renderer, 400, 640, status, muted, 1.5f);
 }

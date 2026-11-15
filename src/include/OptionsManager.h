@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <filesystem>
@@ -8,6 +9,7 @@ struct DisplaySettings {
     bool fullscreen = false;
     bool vsync = true;
     int masterVolume = 80;
+    int musicVolume = 25;
 };
 
 class OptionsManager {

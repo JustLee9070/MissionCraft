@@ -1,6 +1,5 @@
 
 #include "Game.h"
-
 #include "screens/TitleScreen.h"
 #include "screens/MainMenu.h"
 #include "screens/DesignerScreen.h"
@@ -41,6 +40,7 @@ bool Game::initialize()
 {
     options.load();
     const auto& display = options.getSettings();
+
     if (!SDL_Init(SDL_INIT_VIDEO))
     {
         std::cerr << "SDL initialization failed: " << SDL_GetError() << '\n';
@@ -64,6 +64,7 @@ bool Game::initialize()
         std::cerr << "Could not configure the game viewport: " << SDL_GetError() << '\n';
         return false;
     }
+
     if (!SDL_SetRenderVSync(renderer, display.vsync ? 1 : 0)) {
         std::cerr << "Could not apply saved VSync setting: " << SDL_GetError() << '\n';
     }
@@ -76,12 +77,21 @@ bool Game::initialize()
 
     ttfInitialized = true;
     assets = std::make_unique<AssetManager>(renderer);
+
     audio = std::make_unique<GameAudio>();
+
     if (audio->initialize()) {
         audio->setVolume(display.masterVolume);
-    }
-    running = true;
+        audio->setMusicVolume(display.musicVolume);
 
+        if (!audio->playMusic("assets/audio/music/space_ambient_converted.wav")) {
+            std::cerr << "Could not load background music.\n";
+        }
+    } else {
+        std::cerr << "Audio initialization failed: " << SDL_GetError() << '\n';
+    }
+
+    running = true;
     changeScreen(ScreenType::Title);
 
     return true;
@@ -91,35 +101,46 @@ bool Game::applyDisplaySettings(const DisplaySettings& requested)
 {
     const auto previous = options.getSettings();
     int previousVsync = 0;
+
     if (!SDL_GetRenderVSync(renderer, &previousVsync)) {
         return false;
     }
+
     const bool wasFullscreen = (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN) != 0;
+
     if (!SDL_SetRenderVSync(renderer, requested.vsync ? 1 : 0)) {
         return false;
     }
+
     if (wasFullscreen != requested.fullscreen &&
         !SDL_SetWindowFullscreen(window, requested.fullscreen)) {
         SDL_SetRenderVSync(renderer, previousVsync);
         return false;
     }
+
     options.setSettings(requested);
+
     if (options.save()) {
         if (audio) {
-            audio->setVolume(options.getSettings().masterVolume);
+            const auto& settings = options.getSettings();
+            audio->setVolume(settings.masterVolume);
+            audio->setMusicVolume(settings.musicVolume);
             audio->play(SoundCue::Select);
         }
         return true;
     }
+
     options.setSettings(previous);
     SDL_SetWindowFullscreen(window, wasFullscreen);
     SDL_SetRenderVSync(renderer, previousVsync);
+
     return false;
 }
 
 void Game::changeScreen(ScreenType screen)
 {
     const char* menuMessage = "";
+
     if (screen == ScreenType::LoadGame) {
         if (auto saved = saves.loadGame()) {
             gameState = std::move(saved->state);
@@ -132,8 +153,10 @@ void Game::changeScreen(ScreenType screen)
         gameState = GameState{};
         screen = ScreenType::Designer;
     }
+
     activeScreen = screen;
     saveMessage = "";
+
     switch (screen)
     {
     case ScreenType::Title:
@@ -200,6 +223,7 @@ void Game::handleEvents()
         if (currentScreen)
         {
             SDL_ConvertEventToRenderCoordinates(renderer, &event);
+
             if (canSaveOn(activeScreen) && saveRequested(event)) {
                 saveMessage = saves.saveGame(gameState, activeScreen) ?
                     "Game saved." : "Could not save the game.";
@@ -208,17 +232,21 @@ void Game::handleEvents()
                 const auto previousSteps = gameState.completedSteps();
                 const auto previousParts = gameState.spacecraft().components().size();
                 const auto previousDestination = gameState.destination().id;
+
                 currentScreen->handleEvents(event);
+
                 if (audio) {
                     const auto phase = gameState.missionPhase();
+
                     if (phase != previousPhase && phase == MissionPhase::Completed) {
                         audio->play(SoundCue::Complete);
                     } else if (phase != previousPhase && phase == MissionPhase::Failed) {
                         audio->play(SoundCue::Failure);
-                    } else if (activeScreen == ScreenType::MissionControl && previousSteps == 0 &&
-                               gameState.completedSteps() == 1) {
+                    } else if (activeScreen == ScreenType::MissionControl &&
+                               previousSteps == 0 && gameState.completedSteps() == 1) {
                         audio->play(SoundCue::Launch);
-                    } else if (hasPendingScreen || previousParts != gameState.spacecraft().components().size() ||
+                    } else if (hasPendingScreen ||
+                               previousParts != gameState.spacecraft().components().size() ||
                                previousDestination != gameState.destination().id) {
                         audio->play(SoundCue::Select);
                     }
@@ -244,7 +272,9 @@ void Game::update(float deltaTime)
     if (currentScreen)
     {
         const auto previousPhase = gameState.missionPhase();
+
         currentScreen->update(deltaTime);
+
         if (audio && previousPhase == MissionPhase::InProgress) {
             if (gameState.missionPhase() == MissionPhase::Completed) {
                 audio->play(SoundCue::Complete);
@@ -263,11 +293,13 @@ void Game::render()
     }
 
     currentScreen->render(renderer);
+
     if (canSaveOn(activeScreen)) {
         using namespace screenDrawing;
         drawText(renderer, 32, 770, saveMessage, muted, 1.25f);
         drawButton(renderer, saveButton, pointerPosition(renderer), "Save (F5)", true);
     }
+
     SDL_RenderPresent(renderer);
 }
 
