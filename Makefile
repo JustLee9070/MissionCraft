@@ -32,12 +32,17 @@ $(TARGET): $(SRC) $(RESOURCE)
 run: all
 	.\$(TARGET)
 
+
 build:
-	bash -lc "rm -rf build && mkdir -p build/saves"
-	$(WINDRES) resources.rc -O coff -o $(BUILD_DIR)/resources.o
-	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) $(SRC) $(BUILD_DIR)/resources.o -o $(BUILD_DIR)/MissionCraft.exe $(LIBS)
-	bash -lc "cp -r assets build/ && if [ -d config ]; then cp -r config build/; fi && ldd build/MissionCraft.exe | awk '\$$3 ~ /\/(ucrt64|mingw64)\/bin\/.*\.dll$$/ {print \$$3}' | sort -u | while read dll; do cp \"\$$dll\" build/; done"
-	bash -lc "printf 'MissionCraft - Windows Release\n\nExtract this folder and run MissionCraft.exe.\nDo not separate the executable from its assets or DLL files.\n' > build/README.txt"
+	if exist build rmdir /S /Q build
+	mkdir build
+	mkdir build\saves
+	$(WINDRES) resources.rc -O coff -o build\resources.o
+	$(CXX) $(CXXFLAGS) $(RELEASE_FLAGS) $(SRC) build\resources.o -o build\MissionCraft.exe $(LIBS)
+	powershell -NoProfile -ExecutionPolicy Bypass -Command "Copy-Item assets build -Recurse"
+	powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Test-Path config) { Copy-Item config build -Recurse }"
+	powershell -NoProfile -ExecutionPolicy Bypass -Command "$$deps = & objdump -p build/MissionCraft.exe | Select-String 'DLL Name:'; foreach ($$dep in $$deps) { $$name = ($$dep.ToString() -split ':')[1].Trim(); $$path = & where.exe $$name 2>$$null | Select-Object -First 1; if ($$path) { Copy-Item $$path build -Force } }"
+	powershell -NoProfile -ExecutionPolicy Bypass -Command "Set-Content build/README.txt 'MissionCraft - Windows Release`n`nExtract this folder and run MissionCraft.exe.`nKeep the executable, assets, and DLL files together.'"
 
 clean:
 	del /Q $(TARGET) $(RESOURCE) 2>NUL
