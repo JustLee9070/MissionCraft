@@ -1,6 +1,8 @@
+
 #pragma once
 
 #include "Destination.h"
+#include "LaunchVehicle.h"
 
 #include <cstddef>
 #include <vector>
@@ -42,12 +44,23 @@ class GameState {
 public:
     Spacecraft& spacecraft() { return craft; }
     const Spacecraft& spacecraft() const { return craft; }
+
     const DestinationProfile& destination() const;
     const char* destinationName() const;
     MissionPhase missionPhase() const;
+
     void selectDestination(Destination destination);
+
+    const LaunchVehicle& launchVehicle() const;
+    LaunchVehicleId launchVehicleId() const;
+    bool selectLaunchVehicle(LaunchVehicleId id);
+    double launchMassKg() const;
+    double launchVehiclePayloadCapacityKg() const;
+    bool launchVehicleCompatible() const;
+
     bool canBeginMission() const;
     bool beginMission();
+
     const std::vector<FlightStep>& flightPlan() const;
     std::size_t completedSteps() const { return stepsCompleted; }
     double remainingFuelKg() const { return fuelKg; }
@@ -63,13 +76,16 @@ public:
     void togglePayload();
     void toggleProtectiveMode();
     void updateFlight(double seconds);
+
     bool restoreMission(MissionPhase savedPhase, std::size_t steps, double loaded,
                         double remaining, const FlightStatus& savedFlight);
     void returnToPlanning();
+    double maxFuelLoadKg() const;
 
 private:
     Spacecraft craft;
     const DestinationProfile* selectedDestination = &destinationCatalog().front();
+    LaunchVehicleId selectedLaunchVehicle = LaunchVehicleId::PSLV;
     MissionPhase phase = MissionPhase::Planning;
     std::size_t stepsCompleted = 0;
     double fuelKg = 0;

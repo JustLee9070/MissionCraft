@@ -1,7 +1,7 @@
 {
   "audio": {
     "masterVolume": 80,
-    "musicVolume": 70
+    "musicVolume": 20
   },
   "display": {
     "fullscreen": false,

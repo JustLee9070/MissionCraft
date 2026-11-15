@@ -1,9 +1,15 @@
+
 #pragma once
 
 #include "Component.h"
 
 #include <functional>
 #include <vector>
+
+enum class SpacecraftConfiguration {
+    Standard,
+    Lightweight
+};
 
 struct SpacecraftStats {
     double dryMassKg = 0;
@@ -22,10 +28,15 @@ public:
     bool removeComponent(ComponentId id);
     bool hasComponent(ComponentId id) const;
     const InstalledComponents& components() const;
+
+    void setConfiguration(SpacecraftConfiguration configuration);
+    SpacecraftConfiguration configuration() const;
+
     SpacecraftStats stats() const;
     std::vector<const char*> readinessIssues() const;
     bool isReady() const;
 
 private:
     InstalledComponents installed;
+    SpacecraftConfiguration selectedConfiguration = SpacecraftConfiguration::Standard;
 };
