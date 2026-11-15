@@ -1,11 +1,12 @@
 {
   "audio": {
     "masterVolume": 80,
-    "musicVolume": 0
+    "musicVolume": 70
   },
   "display": {
     "fullscreen": false,
     "height": 800,
+    "showFPS": true,
     "vsync": true,
     "width": 1200
   }

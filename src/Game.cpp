@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <utility>
+#include <string>
 
 namespace
 {
@@ -294,10 +295,16 @@ void Game::render()
 
     currentScreen->render(renderer);
 
+    using namespace screenDrawing;
+
     if (canSaveOn(activeScreen)) {
-        using namespace screenDrawing;
         drawText(renderer, 32, 770, saveMessage, muted, 1.25f);
         drawButton(renderer, saveButton, pointerPosition(renderer), "Save (F5)", true);
+    }
+
+    if (options.getSettings().showFPS) {
+        const std::string fpsText = "FPS: " + std::to_string(displayedFps);
+        drawText(renderer, 1090, 12, fpsText.c_str(), green, 1.0f);
     }
 
     SDL_RenderPresent(renderer);
@@ -310,9 +317,17 @@ void Game::run()
     while (running)
     {
         Uint64 currentTime = SDL_GetTicks();
-
         float deltaTime = static_cast<float>(currentTime - lastTime) / 1000.0f;
         lastTime = currentTime;
+
+        fpsFrames++;
+        fpsTimer += deltaTime;
+
+        if (fpsTimer >= 1.0f) {
+            displayedFps = static_cast<int>(fpsFrames / fpsTimer);
+            fpsFrames = 0;
+            fpsTimer = 0.0f;
+        }
 
         handleEvents();
         update(deltaTime);

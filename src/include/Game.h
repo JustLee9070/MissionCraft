@@ -29,6 +29,10 @@ private:
     ScreenType pendingScreen = ScreenType::Title;
     bool hasPendingScreen = false;
 
+    float fpsTimer = 0.0f;
+    unsigned int fpsFrames = 0;
+    int displayedFps = 0;
+
     void handleEvents();
     void update(float deltaTime);
     void render();

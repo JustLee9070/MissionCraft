@@ -10,6 +10,7 @@ struct DisplaySettings {
     bool vsync = true;
     int masterVolume = 80;
     int musicVolume = 25;
+    bool showFPS = false;
 };
 
 class OptionsManager {

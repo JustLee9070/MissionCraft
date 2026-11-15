@@ -76,7 +76,8 @@ void OptionsManager::load()
         readToggle(*display, "fullscreen", settings.fullscreen),
         readToggle(*display, "vsync", settings.vsync),
         masterVolume,
-        musicVolume
+        musicVolume,
+        readToggle(*display, "showFPS", settings.showFPS)
     });
 }
 
@@ -99,7 +100,8 @@ bool OptionsManager::save() const
             {"width", settings.width},
             {"height", settings.height},
             {"fullscreen", settings.fullscreen},
-            {"vsync", settings.vsync}
+            {"vsync", settings.vsync},
+            {"showFPS", settings.showFPS}
         }},
         {"audio", {
             {"masterVolume", settings.masterVolume},
