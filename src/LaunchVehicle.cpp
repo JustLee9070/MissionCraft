@@ -38,15 +38,21 @@ const LaunchVehicle* findLaunchVehicle(LaunchVehicleId id)
 double payloadCapacity(const LaunchVehicle& vehicle, Destination destination)
 {
     const auto index = static_cast<std::size_t>(destination);
-    return index < vehicle.payloadCapacityKg.size()
-        ? vehicle.payloadCapacityKg[index]
-        : 0;
+
+    if (index >= vehicle.payloadCapacityKg.size()) {
+        return 0.0;
+    }
+
+    return vehicle.payloadCapacityKg[index];
 }
 
 bool isVehicleCompatible(const LaunchVehicle& vehicle, Destination destination,
                          double payloadMassKg)
 {
-    return std::isfinite(payloadMassKg) && payloadMassKg >= 0 &&
-           payloadCapacity(vehicle, destination) > 0 &&
-           payloadMassKg <= payloadCapacity(vehicle, destination);
+    const double capacity = payloadCapacity(vehicle, destination);
+
+    return std::isfinite(payloadMassKg) &&
+           payloadMassKg >= 0.0 &&
+           capacity > 0.0 &&
+           payloadMassKg <= capacity;
 }

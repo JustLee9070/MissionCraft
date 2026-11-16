@@ -318,7 +318,7 @@ void PlannerScreen::render(SDL_Renderer* renderer)
         std::snprintf(
             detail, sizeof(detail),
             "Cost: $%.0fM",
-            vehicle.cost
+            vehicle.cost / 1000000.0
         );
 
         drawText(renderer, card.x + 10, card.y + 126,
@@ -328,7 +328,7 @@ void PlannerScreen::render(SDL_Renderer* renderer)
         std::snprintf(
             detail, sizeof(detail),
             "Reliability: %.0f%%",
-            vehicle.reliability
+            vehicle.reliability * 100
         );
 
         drawText(renderer, card.x + 10, card.y + 146,
